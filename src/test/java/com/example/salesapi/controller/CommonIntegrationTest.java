@@ -111,28 +111,24 @@ public class CommonIntegrationTest {
     return responseEntity.getBody();
   }
 
-  public <T> T assertCreated(ResponseEntity<T> responseEntity) {
+  public <T> void assertCreated(ResponseEntity<T> responseEntity) {
     assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
     assertNotNull(responseEntity.getBody());
-    return responseEntity.getBody();
   }
 
-  public <T> T assertNotFound(ResponseEntity<T> responseEntity) {
+  public <T> void assertNotFound(ResponseEntity<T> responseEntity) {
     assertEquals(HttpStatus.NOT_FOUND, responseEntity.getStatusCode());
     assertEquals("\"Not found\"", responseEntity.getBody());
-    return responseEntity.getBody();
   }
 
-  public <T> T assertInvalidParameters(ResponseEntity<T> responseEntity) {
+  public <T> void assertInvalidParameters(ResponseEntity<T> responseEntity) {
     assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
     assertEquals("\"Invalid parameters\"", responseEntity.getBody());
-    return responseEntity.getBody();
   }
 
-  public <T> T assertInvalidOrderStatus(ResponseEntity<T> responseEntity) {
+  public <T> void assertInvalidOrderStatus(ResponseEntity<T> responseEntity) {
     assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
     assertEquals("\"Invalid order status\"", responseEntity.getBody());
-    return responseEntity.getBody();
   }
 
 }

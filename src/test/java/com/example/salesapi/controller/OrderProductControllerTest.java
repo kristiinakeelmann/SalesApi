@@ -7,7 +7,6 @@ import com.example.salesapi.dto.ProductUpdateDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
