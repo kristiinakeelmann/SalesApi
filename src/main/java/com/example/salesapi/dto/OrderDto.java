@@ -1,4 +1,4 @@
-package com.example.salesapi.controller.dto;
+package com.example.salesapi.dto;
 
 import com.example.salesapi.model.enums.Status;
 import lombok.Data;

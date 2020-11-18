@@ -1,7 +1,8 @@
 package com.example.salesapi.controller;
 
-import com.example.salesapi.controller.dto.ProductDto;
+import com.example.salesapi.dto.ProductDto;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -11,7 +12,9 @@ public class ProductControllerTest extends CommonIntegrationTest {
 
   @Test
   void user_can_get_product_list() {
-    List<ProductDto> products = assertOk(getProducts());
+    ResponseEntity<List<ProductDto>> result = getProducts();
+
+    List<ProductDto> products = assertOk(result);
     assertTrue(products.size() > 0);
   }
 

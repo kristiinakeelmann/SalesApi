@@ -1,16 +1,12 @@
 package com.example.salesapi.controller;
 
-import com.example.salesapi.controller.dto.OrderDto;
-import com.example.salesapi.controller.dto.OrderProductDto;
-import com.example.salesapi.controller.dto.OrderUpdateDto;
-import com.example.salesapi.controller.dto.ProductUpdateDto;
-import com.example.salesapi.model.OrderReplacementProduct;
+import com.example.salesapi.dto.*;
 import com.example.salesapi.model.enums.Status;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -18,174 +14,144 @@ public class OrderControllerTest extends CommonIntegrationTest {
 
   @Test
   void user_can_create_order() {
-    assertOk(createOrder());
-  }
-
-  @Test
-  void user_can_add_product_to_order() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    List<Integer> productIds = Collections.singletonList(123);
-    assertOk(addProductToOrder(emptyOrder, productIds));
-  }
-
-  @Test
-  void user_can_not_add_missing_product_to_order() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    List<Integer> productIds = Collections.singletonList(-1);
-    assertInvalidParameters(addProductToOrder(emptyOrder, productIds));
-  }
-
-  @Test
-  void user_can_not_add_products_to_not_existing_order() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    emptyOrder.setId(RANDOM_UUID);
-    List<Integer> productIds = Collections.singletonList(123);
-    assertNotFound(addProductToMissingOrder(emptyOrder, productIds));
-  }
-
-  @Test
-  void user_can_not_add_products_to_order_with_invalidUUID() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    emptyOrder.setId(INVALID_UUID);
-    List<Integer> productIds = Collections.singletonList(123);
-    assertNotFound(addProductToMissingOrder(emptyOrder, productIds));
+    assertCreated(createOrder());
   }
 
   @Test
   void user_can_get_order() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    assertOk(getOrder(emptyOrder));
+    OrderDto emptyOrder = createOrder().getBody();
+
+    ResponseEntity<OrderDto> result = getOrder(emptyOrder);
+
+    assertOk(result);
   }
 
   @Test
   void user_can_not_get_not_existing_order() {
-    OrderDto emptyOrder = assertOk(createOrder());
+    OrderDto emptyOrder = createOrder().getBody();
     emptyOrder.setId(RANDOM_UUID);
-    assertNotFound(getMissingOrder(emptyOrder));
+
+    ResponseEntity<String> result = getMissingOrder(emptyOrder);
+
+    assertNotFound(result);
   }
 
   @Test
   void user_can_not_get_order_with_invalid_UUUID() {
-    OrderDto emptyOrder = assertOk(createOrder());
+    OrderDto emptyOrder = createOrder().getBody();
     emptyOrder.setId(INVALID_UUID);
-    assertNotFound(getMissingOrder(emptyOrder));
-  }
 
-  @Test
-  void user_can_get_order_products() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    assertOk(getOrderProducts(emptyOrder));
-  }
+    ResponseEntity<String> result = getMissingOrder(emptyOrder);
 
-  @Test
-  void user_can_not_get_not_existing_order_products() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    emptyOrder.setId(RANDOM_UUID);
-    assertNotFound(getMissingOrderProducts(emptyOrder));
-  }
-
-  @Test
-  void user_can_not_get_order_products_with_invalidUUID() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    emptyOrder.setId(INVALID_UUID);
-    assertNotFound(getMissingOrderProducts(emptyOrder));
+    assertNotFound(result);
   }
 
   @Test
   void user_can_update_order_status() {
-    OrderDto emptyOrder = assertOk(createOrder());
+    OrderDto emptyOrder = createOrder().getBody();
     OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
-    orderUpdateDto.setStatus(Status.PAID);
-    assertOk(updateOrderStatus(emptyOrder, orderUpdateDto));
-    assertEquals(getOrder(emptyOrder).getBody().getStatus(), Status.PAID);
+    orderUpdateDto.setStatus(PAID);
+
+    ResponseEntity<String> result = updateOrderStatus(emptyOrder, orderUpdateDto);
+
+    assertOk(result);
+    assertEquals(Status.PAID, getOrder(emptyOrder).getBody().getStatus());
+  }
+
+  @Test
+  void user_can_not_update_order_status_with_invalid_status() {
+    OrderDto emptyOrder = createOrder().getBody();
+    OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
+    orderUpdateDto.setStatus(NONEXISTENT);
+
+    ResponseEntity<String> result = updateOrderStatus(emptyOrder, orderUpdateDto);
+
+    assertInvalidOrderStatus(result);
   }
 
   @Test
   void user_can_not_reverse_order_status() {
-    OrderDto emptyOrder = assertOk(createOrder());
+    OrderDto emptyOrder = createOrder().getBody();
     OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
-    orderUpdateDto.setStatus(Status.PAID);
-    assertOk(updateOrderStatus(emptyOrder, orderUpdateDto));
-    orderUpdateDto.setStatus(Status.NEW);
-    assertInvalidParameters(updateOrderStatus(emptyOrder, orderUpdateDto));
+    orderUpdateDto.setStatus(PAID);
+    updateOrderStatus(emptyOrder, orderUpdateDto);
+    orderUpdateDto.setStatus(NEW);
+
+    ResponseEntity<String> result = updateOrderStatus(emptyOrder, orderUpdateDto);
+
+    assertInvalidOrderStatus(result);
   }
 
   @Test
   void user_can_not_update_status_for_not_existing_order() {
-    OrderDto orderDto = assertOk(createOrder());
-    orderDto.setId(RANDOM_UUID);
+    OrderDto emptyOrder = createOrder().getBody();
+    emptyOrder.setId(RANDOM_UUID);
     OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
-    orderUpdateDto.setStatus(Status.PAID);
-    assertNotFound(updateMissingOrder(orderDto, orderUpdateDto));
+    orderUpdateDto.setStatus(PAID);
+
+    ResponseEntity<String> result = updateMissingOrder(emptyOrder, orderUpdateDto);
+
+    assertNotFound(result);
   }
 
   @Test
   void user_can_not_update_status_for_order_with_invalidUUID() {
-    OrderDto orderDto = assertOk(createOrder());
-    orderDto.setId(INVALID_UUID);
+    OrderDto emptyOrder = createOrder().getBody();
+    emptyOrder.setId(INVALID_UUID);
     OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
-    orderUpdateDto.setStatus(Status.PAID);
-    assertNotFound(updateMissingOrder(orderDto, orderUpdateDto));
+    orderUpdateDto.setStatus(PAID);
+
+    ResponseEntity<String> result = updateMissingOrder(emptyOrder, orderUpdateDto);
+
+    assertNotFound(result);
   }
 
   @Test
-  void user_can_update_order_product_quantity() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    assertOk(addProductToOrder(emptyOrder, Collections.singletonList(123)));
-    ProductUpdateDto productUpdateDto = new ProductUpdateDto();
-    productUpdateDto.setQuantity(5);
-    OrderDto orderWithProduct = getOrder(emptyOrder).getBody();
-    assertOk(updateOrderProducts(orderWithProduct, orderWithProduct.getProducts().get(0), productUpdateDto));
-    OrderDto updatedOrder = getOrder(orderWithProduct).getBody();
-    assertEquals(5, updatedOrder.getProducts().get(0).getQuantity());
-  }
-
-  @Test
-  void user_can_not_update_order_product_with_invalid_quantity() {
-    OrderDto orderDto = assertOk(createOrder());
-    assertOk(addProductToOrder(orderDto, Collections.singletonList(123)));
-    OrderDto dbOrderDto = getOrder(orderDto).getBody();
-    OrderProductDto orderProductDto = dbOrderDto.getProducts().get(0);
-    ProductUpdateDto productUpdateDto = new ProductUpdateDto();
-    productUpdateDto.setQuantity(-5);
-    assertInvalidParameters(updateOrderProducts(dbOrderDto, orderProductDto, productUpdateDto));
-  }
-
-  @Test
-  void user_can_replace_product_if_order_status_is_paid() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    assertOk(addProductToOrder(emptyOrder, Collections.singletonList(123)));
+  void user_will_not_get_money_back_when_basket_total_increases_after_product_replacement() {
+    OrderDto emptyOrder = createOrder().getBody();
+    addProductToOrder(emptyOrder, Collections.singletonList(123));
     OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
-    orderUpdateDto.setStatus(Status.PAID);
+    orderUpdateDto.setStatus(PAID);
     OrderDto orderWithProduct = getOrder(emptyOrder).getBody();
-    assertOk(updateOrderStatus(orderWithProduct, orderUpdateDto));
+    updateOrderStatus(orderWithProduct, orderUpdateDto);
     OrderProductDto orderProductDto = orderWithProduct.getProducts().get(0);
-    OrderReplacementProduct orderReplacementProduct = new OrderReplacementProduct();
-    orderReplacementProduct.setId(UUID.randomUUID());
-    orderReplacementProduct.setProductId(123);
-    orderReplacementProduct.setQuantity(8);
     ProductUpdateDto productUpdateDto = new ProductUpdateDto();
     ProductUpdateDto.ReplacedWithDto replacedWithDto = new ProductUpdateDto.ReplacedWithDto();
+    replacedWithDto.setQuantity(1);
+    replacedWithDto.setProduct_id(999);
     productUpdateDto.setReplaced_with(replacedWithDto);
-    assertOk(replaceOrderProduct(orderWithProduct, orderProductDto, productUpdateDto));
+    replaceOrderProduct(orderWithProduct.getId(), orderProductDto.getId(), productUpdateDto);
+
+    AmountDto amountDto = getOrder(orderWithProduct).getBody().getAmount();
+
+    assertEquals(new BigDecimal("1332.92").toString(), amountDto.getDiscount());
+    assertEquals(new BigDecimal("0.45").toString(), amountDto.getPaid());
+    assertEquals(new BigDecimal("0.00").toString(), amountDto.getReturns());
+    assertEquals(new BigDecimal("0.45").toString(), amountDto.getTotal());
   }
 
   @Test
-  void user_can_not_replace_product_if_order_status_is_not_paid() {
-    OrderDto emptyOrder = assertOk(createOrder());
-    assertOk(addProductToOrder(emptyOrder, Collections.singletonList(123)));
+  void user_will_get_money_back_when_basket_total_decreases_after_product_replacement() {
+    OrderDto emptyOrder = createOrder().getBody();
+    addProductToOrder(emptyOrder, Collections.singletonList(999));
+    OrderUpdateDto orderUpdateDto = new OrderUpdateDto();
+    orderUpdateDto.setStatus(PAID);
     OrderDto orderWithProduct = getOrder(emptyOrder).getBody();
+    updateOrderStatus(orderWithProduct, orderUpdateDto);
     OrderProductDto orderProductDto = orderWithProduct.getProducts().get(0);
     ProductUpdateDto productUpdateDto = new ProductUpdateDto();
     ProductUpdateDto.ReplacedWithDto replacedWithDto = new ProductUpdateDto.ReplacedWithDto();
+    replacedWithDto.setQuantity(100);
     replacedWithDto.setProduct_id(123);
-    replacedWithDto.setQuantity(99);
     productUpdateDto.setReplaced_with(replacedWithDto);
-    OrderReplacementProduct orderReplacementProduct = new OrderReplacementProduct();
-    orderReplacementProduct.setId(UUID.randomUUID());
-    orderReplacementProduct.setProductId(999);
-    orderReplacementProduct.setQuantity(8);
-    assertInvalidParameters(replaceOrderProductForNewOrder(orderWithProduct, orderProductDto, productUpdateDto));
+    replaceOrderProduct(orderWithProduct.getId(), orderProductDto.getId(), productUpdateDto);
+
+    AmountDto amountDto = getOrder(orderWithProduct).getBody().getAmount();
+
+    assertEquals(new BigDecimal("0.00").toString(), amountDto.getDiscount());
+    assertEquals(new BigDecimal("1333.37").toString(), amountDto.getPaid());
+    assertEquals(new BigDecimal("1288.37").toString(), amountDto.getReturns());
+    assertEquals(new BigDecimal("45.00").toString(), amountDto.getTotal());
   }
 
 }

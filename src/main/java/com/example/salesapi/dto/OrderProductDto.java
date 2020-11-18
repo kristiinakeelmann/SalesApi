@@ -1,15 +1,13 @@
-package com.example.salesapi.controller.dto;
+package com.example.salesapi.dto;
 
 import lombok.Data;
-
-import java.math.BigDecimal;
 
 @Data
 public class OrderProductDto {
 
   private String id;
   private String name;
-  private BigDecimal price;
+  private String price;
   private Integer product_id;
   private int quantity;
   private OrderProductDto replaced_with;

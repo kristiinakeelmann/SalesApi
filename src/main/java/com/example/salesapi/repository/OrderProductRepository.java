@@ -11,5 +11,6 @@ import java.util.UUID;
 public interface OrderProductRepository extends CrudRepository<OrderProduct, UUID> {
 
   List<OrderProduct> findAllBySalesOrderId(UUID id);
+  OrderProduct findBySalesOrderIdAndProductId(UUID id, Integer productId);
 
 }

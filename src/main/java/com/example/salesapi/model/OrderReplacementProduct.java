@@ -19,4 +19,5 @@ public class OrderReplacementProduct {
   private int quantity;
   private int productId;
   private UUID orderProductId;
+
 }

@@ -1,4 +1,4 @@
-package com.example.salesapi.controller.dto;
+package com.example.salesapi.dto;
 
 import lombok.Data;
 

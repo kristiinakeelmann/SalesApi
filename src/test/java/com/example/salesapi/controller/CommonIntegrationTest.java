@@ -1,8 +1,6 @@
 package com.example.salesapi.controller;
 
-import com.example.salesapi.SalesApiNotFoundException;
-import com.example.salesapi.controller.dto.*;
-import com.example.salesapi.model.OrderReplacementProduct;
+import com.example.salesapi.dto.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -30,11 +28,14 @@ public class CommonIntegrationTest {
   public static final String ORDER_URL = "/orders";
   public static final String RANDOM_UUID = UUID.randomUUID().toString();
   public static final String INVALID_UUID = UUID.randomUUID() + "123";
+  public static final String PAID = "PAID";
+  public static final String NEW = "NEW";
+  public static final String NONEXISTENT = "NONEXISTENT";
   private static final ParameterizedTypeReference<List<ProductDto>> LIST_OF_PRODUCTS = new ParameterizedTypeReference<>() {
   };
   private static final ParameterizedTypeReference<OrderDto> ORDER = new ParameterizedTypeReference<>() {
   };
-  private static final ParameterizedTypeReference<List<OrderProductDto>> LIST_OF_ORDER_PRODUCTS = new ParameterizedTypeReference<List<OrderProductDto>>() {
+  private static final ParameterizedTypeReference<List<OrderProductDto>> LIST_OF_ORDER_PRODUCTS = new ParameterizedTypeReference<>() {
   };
 
   @BeforeEach
@@ -94,8 +95,8 @@ public class CommonIntegrationTest {
     return testRestTemplate.exchange(ORDER_URL + "/" + orderDto.getId() + "/products/" + orderProductDto.getId(), HttpMethod.PATCH, new HttpEntity<>(productUpdateDto), String.class);
   }
 
-  public ResponseEntity<String> replaceOrderProduct(OrderDto orderDto, OrderProductDto orderProductDto, ProductUpdateDto productUpdateDto) {
-    return testRestTemplate.exchange(ORDER_URL + "/" + orderDto.getId() + "/products/" + orderProductDto.getId(), HttpMethod.PATCH, new HttpEntity<>(productUpdateDto), String.class);
+  public ResponseEntity<String> replaceOrderProduct(String orderId, String orderProductId, ProductUpdateDto productUpdateDto) {
+    return testRestTemplate.exchange(ORDER_URL + "/" + orderId+ "/products/" + orderProductId, HttpMethod.PATCH, new HttpEntity<>(productUpdateDto), String.class);
   }
 
   public ResponseEntity<String> replaceOrderProductForNewOrder(OrderDto orderDto, OrderProductDto orderProductDto, ProductUpdateDto productUpdateDto) {
@@ -110,17 +111,28 @@ public class CommonIntegrationTest {
     return responseEntity.getBody();
   }
 
+  public <T> T assertCreated(ResponseEntity<T> responseEntity) {
+    assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+    assertNotNull(responseEntity.getBody());
+    return responseEntity.getBody();
+  }
+
   public <T> T assertNotFound(ResponseEntity<T> responseEntity) {
     assertEquals(HttpStatus.NOT_FOUND, responseEntity.getStatusCode());
-    assertEquals(responseEntity.getBody(), "\"Not found\"");
+    assertEquals("\"Not found\"", responseEntity.getBody());
     return responseEntity.getBody();
   }
 
   public <T> T assertInvalidParameters(ResponseEntity<T> responseEntity) {
     assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
-    assertEquals(responseEntity.getBody(), "\"Invalid parameters\"");
+    assertEquals("\"Invalid parameters\"", responseEntity.getBody());
     return responseEntity.getBody();
   }
 
+  public <T> T assertInvalidOrderStatus(ResponseEntity<T> responseEntity) {
+    assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+    assertEquals("\"Invalid order status\"", responseEntity.getBody());
+    return responseEntity.getBody();
+  }
 
 }

@@ -1,8 +1,8 @@
 package com.example.salesapi.service;
 
-import com.example.salesapi.SalesApiBadRequestException;
-import com.example.salesapi.controller.dto.OrderUpdateDto;
-import com.example.salesapi.controller.dto.ProductUpdateDto;
+import com.example.salesapi.dto.OrderProductDto;
+import com.example.salesapi.dto.OrderUpdateDto;
+import com.example.salesapi.dto.ProductUpdateDto;
 import com.example.salesapi.model.OrderProduct;
 import com.example.salesapi.model.OrderReplacementProduct;
 import com.example.salesapi.model.SalesOrder;
@@ -10,58 +10,75 @@ import com.example.salesapi.model.enums.Status;
 import com.example.salesapi.repository.OrderProductRepository;
 import com.example.salesapi.repository.ReplacementProductRepository;
 import com.example.salesapi.repository.SalesOrderRepository;
+import com.example.salesapi.util.ValidatorUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-@AllArgsConstructor
 @Transactional
+@AllArgsConstructor
 public class OrderCommandService {
 
   SalesOrderRepository salesOrderRepository;
   OrderProductRepository orderProductRepository;
   ReplacementProductRepository replacementProductRepository;
+  OrderQueryService orderQueryService;
+  ValidatorUtil validatorUtil;
 
   public UUID createSalesOrder() {
     SalesOrder dbSalesOrder = salesOrderRepository.save(newSalesOrder());
     return dbSalesOrder.getId();
   }
 
-  public void addProduct(UUID id, List<Integer> productId) {
-    if (findSalesOrderById(id) != null) {
-      orderProductRepository.saveAll(addOrderProduct(id, productId));
+  public void addProduct(UUID id, List<Integer> productIds) {
+    validatorUtil.productExists(productIds);
+    validatorUtil.orderExists(id);
+    validatorUtil.orderStatusIsNew(id);
+    for (Integer productId : productIds) {
+      if (orderProductAlreadyInOrder(id, productId)) {
+        orderProductAlreadyInOrder(id, productId);
+        OrderProduct orderProduct = orderQueryService.getOrderProduct(id, productId);
+        updateProductQuantity(orderProduct.getId(), orderProduct.getQuantity() + 1);
+      } else {
+        orderProductRepository.save(addOrderProduct(id, productId));
+      }
     }
   }
 
+  public void updateProductQuantity(UUID productId, Integer quantity) {
+    validatorUtil.checkProductUpdate(quantity);
+    validatorUtil.orderProductExists(productId);
+    OrderProduct dbOrderProduct = orderQueryService.findOrderProductById(productId);
+    dbOrderProduct.setQuantity(quantity);
+    orderProductRepository.save(dbOrderProduct);
+  }
+
   public void updateSalesOrderStatus(UUID id, OrderUpdateDto orderUpdateDto) {
-    SalesOrder dbSalesOrder = findSalesOrderById(id);
-    if (dbSalesOrder.getStatus() == Status.NEW && orderUpdateDto.getStatus() == Status.PAID) {
+    validatorUtil.orderExists(id);
+    validatorUtil.checkOrderUpdate(orderUpdateDto);
+    SalesOrder dbSalesOrder = orderQueryService.findSalesOrderById(id);
+    if (dbSalesOrder != null) {
+      validatorUtil.canUpdateOrderStatus(dbSalesOrder, orderUpdateDto);
       dbSalesOrder.setStatus(Status.PAID);
       salesOrderRepository.save(dbSalesOrder);
-    } else throw new SalesApiBadRequestException("\"Invalid order status\"");
+    }
   }
 
-  public void updateProductQuantity(UUID orderId, UUID productId, Integer quantity) {
-    OrderProduct dbOrderProduct = findOrderProductById(productId);
-      dbOrderProduct.setQuantity(quantity);
-      orderProductRepository.save(dbOrderProduct);
-  }
-
-  public void replaceProduct(UUID orderId, UUID productId, ProductUpdateDto.ReplacedWithDto replacedWithDto) {
-    if (findSalesOrderById(orderId).getStatus() == Status.PAID) {
-      OrderReplacementProduct orderReplacementProduct = new OrderReplacementProduct();
-      orderReplacementProduct.setId(UUID.randomUUID());
-      orderReplacementProduct.setQuantity(replacedWithDto.getQuantity());
-      orderReplacementProduct.setOrderProductId(productId);
-      orderReplacementProduct.setProductId(replacedWithDto.getProduct_id());
-      replacementProductRepository.save(orderReplacementProduct);
-    } else throw new SalesApiBadRequestException("\"Invalid order status\"");
+  public void replaceProduct(UUID orderId, UUID orderProductId, ProductUpdateDto.ReplacedWithDto replacedWithDto) {
+    validatorUtil.checkProductUpdateReplacedWith(replacedWithDto);
+    validatorUtil.orderStatusIsPaid(orderId);
+    validatorUtil.checkOrderProductId(orderProductId);
+    OrderReplacementProduct orderReplacementProduct = new OrderReplacementProduct();
+    orderReplacementProduct.setId(UUID.randomUUID());
+    orderReplacementProduct.setQuantity(replacedWithDto.getQuantity());
+    orderReplacementProduct.setOrderProductId(orderProductId);
+    orderReplacementProduct.setProductId(replacedWithDto.getProduct_id());
+    replacementProductRepository.save(orderReplacementProduct);
   }
 
   private SalesOrder newSalesOrder() {
@@ -75,27 +92,21 @@ public class OrderCommandService {
     return salesOrder;
   }
 
-  private List<OrderProduct> addOrderProduct(UUID id, List<Integer> productIds) {
-    List<OrderProduct> orderProducts = new ArrayList<>();
-    for (Integer productId : productIds) {
-      OrderProduct orderProduct = new OrderProduct();
-      orderProduct.setId(UUID.randomUUID());
-      orderProduct.setQuantity(1);
-      orderProduct.setProductId(productId);
-      orderProduct.setSalesOrderId(id);
-      orderProducts.add(orderProduct);
+  private OrderProduct addOrderProduct(UUID id, Integer productId) {
+    OrderProduct orderProduct = new OrderProduct();
+    orderProduct.setId(UUID.randomUUID());
+    orderProduct.setQuantity(1);
+    orderProduct.setProductId(productId);
+    orderProduct.setSalesOrderId(id);
+    return orderProduct;
+  }
+
+  private boolean orderProductAlreadyInOrder(UUID uuid, Integer productId) {
+    List<OrderProductDto> salesOrderProducts = orderQueryService.getSalesOrderProducts(uuid);
+    for (OrderProductDto orderProductDto : salesOrderProducts) {
+      return orderProductDto.getProduct_id().equals(productId);
     }
-    return orderProducts;
-  }
-
-  private SalesOrder findSalesOrderById(UUID id) {
-    return salesOrderRepository.findById(id).orElseThrow(() ->
-      new SalesApiBadRequestException(String.format("Order missing with id %d", id)));
-  }
-
-  private OrderProduct findOrderProductById(UUID id) {
-    return orderProductRepository.findById(id).orElseThrow(() ->
-      new SalesApiBadRequestException(String.format("Order product missing with id %d", id)));
+    return false;
   }
 
 }
