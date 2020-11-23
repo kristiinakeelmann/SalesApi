@@ -18,4 +18,4 @@ It is possible to configure listening port number of the application by updating
 
 Application uses an in memory database therefore data is lost when backend is shut down
 
-Swagger is available at http://server:port/api/swagger-ui/index.html
+Swagger is available at http://server:port/context-path/swagger-ui.html
